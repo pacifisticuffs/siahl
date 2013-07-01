@@ -61,7 +61,7 @@ class PlayerStat(models.Model):
   shots   = models.IntegerField(null=True, blank=True, default=0)
   ga      = models.IntegerField(null=True, blank=True, default=0)
   gaa     = models.IntegerField(null=True, blank=True, default=0)
-  save_p  = models.IntegerField(null=True, blank=True, default=0)
+  save_p  = models.FloatField(null=True, blank=True, default=0.0)
 
 
   def __unicode__(self):

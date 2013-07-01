@@ -50,7 +50,7 @@ class Command(BaseCommand):
 
   def get_details(self, url, team):
     self.stdout.write('Scraping team details: %s' % url)
-    r = requests.get(url)
+    r = requests.get(self.SERVER + url)
     root = lxml.html.fromstring(r.content)
     tables = root.cssselect('table')
     goalie = False
@@ -77,18 +77,21 @@ class Command(BaseCommand):
           for playerRow in rows[2:]:
             cells = playerRow.cssselect('td')
             name = cells[0].text_content().strip()
+            num = cells[1].text_content().strip()
+            if not num:
+              num = 0
 
             # populate the player's stats
             if goalie:
               stats = {
-                'number'  : cells[1].text_content().strip(),
-                'gp'      : cells[2].text_content().strip(),
-                'goals'   : cells[3].text_content().strip(),
-                'assists' : cells[4].text_content().strip(),
-                'shots'   : cells[5].text_content().strip(),
-                'ga'      : cells[6].text_content().strip(),
-                'gaa'     : cells[7].text_content().strip(),
-                'save_p'  : cells[8].text_content().strip(),
+                'number'  : num,
+                'gp'      : int(cells[2].text_content().strip()),
+                'goals'   : int(cells[3].text_content().strip()),
+                'assists' : int(cells[4].text_content().strip()),
+                'shots'   : int(cells[5].text_content().strip()),
+                'ga'      : int(cells[6].text_content().strip()),
+                'gaa'     : int(cells[7].text_content().strip()),
+                'save_p'  : float(cells[8].text_content().strip()),
                 'ppg'     : 0,
                 'ppa'     : 0,
                 'shg'     : 0,
@@ -102,23 +105,23 @@ class Command(BaseCommand):
               }
             else:
               stats = {
-                'number'  : cells[1].text_content().strip(),
-                'gp'      : cells[2].text_content().strip(),
-                'goals'   : cells[3].text_content().strip(),
-                'assists' : cells[4].text_content().strip(),
-                'ppg'     : cells[5].text_content().strip(),
-                'ppa'     : cells[6].text_content().strip(),
-                'shg'     : cells[7].text_content().strip(),
-                'sha'     : cells[8].text_content().strip(),
-                'gwg'     : cells[9].text_content().strip(),
-                'gwa'     : cells[10].text_content().strip(),
-                'psg'     : cells[11].text_content().strip(),
-                'eng'     : cells[12].text_content().strip(),
-                'sog'     : cells[13].text_content().strip(),
-                'pts'     : cells[14].text_content().strip(),
+                'number'  : num,
+                'gp'      : int(cells[2].text_content().strip()),
+                'goals'   : int(cells[3].text_content().strip()),
+                'assists' : int(cells[4].text_content().strip()),
+                'ppg'     : int(cells[5].text_content().strip()),
+                'ppa'     : int(cells[6].text_content().strip()),
+                'shg'     : int(cells[7].text_content().strip()),
+                'sha'     : int(cells[8].text_content().strip()),
+                'gwg'     : int(cells[9].text_content().strip()),
+                'gwa'     : int(cells[10].text_content().strip()),
+                'psg'     : int(cells[11].text_content().strip()),
+                'eng'     : int(cells[12].text_content().strip()),
+                'sog'     : int(cells[13].text_content().strip()),
+                'pts'     : int(cells[14].text_content().strip()),
                 'ga'      : 0,
                 'gaa'     : 0,
-                'save_p'  : 0
+                'save_p'  : 0.0
               }
 
             player = self.add_player(name, goalie)
@@ -172,26 +175,27 @@ class Command(BaseCommand):
       self.stdout.write(' ... saved to db, id=%s' % returnVal)
 
     self.stdout.write('Updating stats for player %s' % returnVal)
-    returnVal.number  = stats['number']
-    returnVal.gp      = stats['gp']
-    returnVal.goals   = stats['goals']
-    returnVal.assists = stats['assists']
-    returnVal.ppg     = stats['ppg']
-    returnVal.ppa     = stats['ppa']
-    returnVal.shg     = stats['shg']
-    returnVal.sha     = stats['sha']
-    returnVal.gwg     = stats['gwg']
-    returnVal.gwa     = stats['gwa']
-    returnVal.psg     = stats['psg']
-    returnVal.eng     = stats['eng']
-    returnVal.sog     = stats['sog']
-    returnVal.pts     = stats['pts']
-    returnVal.ga      = stats['ga']
-    returnVal.gaa     = stats['gaa']
-    returnVal.save_p  = stats['save_p']
-    returnVal.save()
+    PlayerStat.objects.filter(id=returnVal.id).update(
+      number  = stats['number'],
+      gp      = stats['gp'],
+      goals   = stats['goals'],
+      assists = stats['assists'],
+      ppg     = stats['ppg'],
+      ppa     = stats['ppa'],
+      shg     = stats['shg'],
+      sha     = stats['sha'],
+      gwg     = stats['gwg'],
+      gwa     = stats['gwa'],
+      psg     = stats['psg'],
+      eng     = stats['eng'],
+      sog     = stats['sog'],
+      pts     = stats['pts'],
+      ga      = stats['ga'],
+      gaa     = stats['gaa'],
+      save_p  = stats['save_p']
+    )
 
-    return returnVal.id
+    return returnVal
 
 
   def add_player(self, player, goalie):
