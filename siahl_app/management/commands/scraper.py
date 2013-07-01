@@ -12,15 +12,15 @@ class Command(BaseCommand):
   DIVISION_NAME = ''
   DIVISION_ID = 0
   TEAM = ''
-  # SERVER = 'http://stats.liahl.org/'
+  SERVER = 'http://stats.liahl.org/'
 
-  SERVER = 'http://localhost/data/'
+  # SERVER = 'http://localhost/data/'
 
   def handle(self, *args, **options):
     self.stdout.write('Scraping started at %s' % str(datetime.datetime.now()))
 
-    # url = SERVER + 'display-stats.php?league=1'
-    url = self.SERVER + 'display-stats.php.html'
+    url = self.SERVER + 'display-stats.php?league=1'
+    # url = self.SERVER + 'display-stats.php.html'
 
     self.stdout.write('Scraping url: %s\n' % url)
     r = requests.get(url)
@@ -31,21 +31,21 @@ class Command(BaseCommand):
       division = cell.cssselect('th')
       team = cell.cssselect('td a')
       if division and len(division) == 1:
-        division = division[0].text_content().strip()
+        division = ' '.join(division[0].text_content().strip().split())
 
         # this is a division name
         if 'Senior' in division:
-          DIVISION_NAME = division
+          self.DIVISION_NAME = division
           self.stdout.write('\nFound division: %s' % division)
-          DIVISION_ID = self.add_division(division)
+          self.DIVISION_ID = self.add_division(division)
 
       # this should be a team
-      elif team and len(team) == 1 and team[0].get('href') and DIVISION_ID:
+      elif team and len(team) == 1 and team[0].get('href') and self.DIVISION_ID:
         detail = team[0].get('href')
-        team = team[0].text_content().strip()
-        self.stdout.write('\nFound %s in %s (%s) at %s' % (team, DIVISION_NAME, DIVISION_ID, detail))
-        TEAM = self.add_team(team, DIVISION_ID)
-        self.get_details(detail, TEAM)
+        team = ' '.join(team[0].text_content().strip().split())
+        self.stdout.write('\nFound %s in %s (%s) at %s' % (team, self.DIVISION_NAME, self.DIVISION_ID, detail))
+        self.TEAM = self.add_team(team, self.DIVISION_ID)
+        self.get_details(detail, self.TEAM)
 
 
   def get_details(self, url, team):
@@ -76,22 +76,29 @@ class Command(BaseCommand):
 
           for playerRow in rows[2:]:
             cells = playerRow.cssselect('td')
-            name = cells[0].text_content().strip()
-            num = cells[1].text_content().strip()
-            if not num:
-              num = 0
+            name = ' '.join(cells[0].text_content().strip().split())
+            num = ' '.join(cells[1].text_content().strip().split())
+            # this is ugly. need a better way to find out if we have an int
+            # for that matter, most of the stats stuff is very fragile and
+            # susceptible to bad data
+            try:
+              num = int(num)
+            except:
+              self.stdout.write('num was definitely not an int: %s' % num)
+              num = None
 
             # populate the player's stats
             if goalie:
               stats = {
                 'number'  : num,
                 'gp'      : int(cells[2].text_content().strip()),
-                'goals'   : int(cells[3].text_content().strip()),
-                'assists' : int(cells[4].text_content().strip()),
-                'shots'   : int(cells[5].text_content().strip()),
-                'ga'      : int(cells[6].text_content().strip()),
-                'gaa'     : int(cells[7].text_content().strip()),
-                'save_p'  : float(cells[8].text_content().strip()),
+                'shots'   : int(cells[3].text_content().strip()),
+                'ga'      : int(cells[4].text_content().strip()),
+                'gaa'     : float(cells[5].text_content().strip()),
+                'save_p'  : float(cells[6].text_content().strip()),
+                'goals'   : int(cells[7].text_content().strip()),
+                'assists' : int(cells[8].text_content().strip()),
+                'pts'     : int(cells[9].text_content().strip()),
                 'ppg'     : 0,
                 'ppa'     : 0,
                 'shg'     : 0,
@@ -100,8 +107,7 @@ class Command(BaseCommand):
                 'gwa'     : 0,
                 'psg'     : 0,
                 'eng'     : 0,
-                'sog'     : 0,
-                'pts'     : 0
+                'sog'     : 0
               }
             else:
               stats = {
@@ -120,7 +126,7 @@ class Command(BaseCommand):
                 'sog'     : int(cells[13].text_content().strip()),
                 'pts'     : int(cells[14].text_content().strip()),
                 'ga'      : 0,
-                'gaa'     : 0,
+                'gaa'     : 0.0,
                 'save_p'  : 0.0
               }
 
@@ -175,7 +181,7 @@ class Command(BaseCommand):
       self.stdout.write(' ... saved to db, id=%s' % returnVal)
 
     self.stdout.write('Updating stats for player %s' % returnVal)
-    PlayerStat.objects.filter(id=returnVal.id).update(
+    PlayerStat.objects.filter(player_id=player, team_id=team).update(
       number  = stats['number'],
       gp      = stats['gp'],
       goals   = stats['goals'],
