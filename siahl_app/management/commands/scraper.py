@@ -12,12 +12,15 @@ class Command(BaseCommand):
   DIVISION_NAME = ''
   DIVISION_ID = 0
   TEAM = ''
-  SERVER = 'http://stats.liahl.org/'
+  # SERVER = 'http://stats.liahl.org/'
+
+  SERVER = 'http://localhost/data/'
 
   def handle(self, *args, **options):
     self.stdout.write('Scraping started at %s' % str(datetime.datetime.now()))
 
-    url = SERVER + 'display-stats.php?league=1'
+    # url = SERVER + 'display-stats.php?league=1'
+    url = self.SERVER + 'display-stats.php.html'
 
     self.stdout.write('Scraping url: %s\n' % url)
     r = requests.get(url)
@@ -70,31 +73,56 @@ class Command(BaseCommand):
           else:
             self.stdout.write('Found players')
 
-          # This contains the column headers for our stats blob
-          blob = self.get_headers(rows[1])
-          self.stdout.write('Stats struct looks like %s' % blob)
 
           for playerRow in rows[2:]:
             cells = playerRow.cssselect('td')
-            name = cells[0]
-            iterator = 1
-            # populate player's stats
-            for key in blob:
-              blob[key] = cells[iterator].text_content().strip()
-              iterator++
+            name = cells[0].text_content().strip()
+
+            # populate the player's stats
+            if goalie:
+              stats = {
+                'number'  : cells[1].text_content().strip(),
+                'gp'      : cells[2].text_content().strip(),
+                'goals'   : cells[3].text_content().strip(),
+                'assists' : cells[4].text_content().strip(),
+                'shots'   : cells[5].text_content().strip(),
+                'ga'      : cells[6].text_content().strip(),
+                'gaa'     : cells[7].text_content().strip(),
+                'save_p'  : cells[8].text_content().strip(),
+                'ppg'     : 0,
+                'ppa'     : 0,
+                'shg'     : 0,
+                'sha'     : 0,
+                'gwg'     : 0,
+                'gwa'     : 0,
+                'psg'     : 0,
+                'eng'     : 0,
+                'sog'     : 0,
+                'pts'     : 0
+              }
+            else:
+              stats = {
+                'number'  : cells[1].text_content().strip(),
+                'gp'      : cells[2].text_content().strip(),
+                'goals'   : cells[3].text_content().strip(),
+                'assists' : cells[4].text_content().strip(),
+                'ppg'     : cells[5].text_content().strip(),
+                'ppa'     : cells[6].text_content().strip(),
+                'shg'     : cells[7].text_content().strip(),
+                'sha'     : cells[8].text_content().strip(),
+                'gwg'     : cells[9].text_content().strip(),
+                'gwa'     : cells[10].text_content().strip(),
+                'psg'     : cells[11].text_content().strip(),
+                'eng'     : cells[12].text_content().strip(),
+                'sog'     : cells[13].text_content().strip(),
+                'pts'     : cells[14].text_content().strip(),
+                'ga'      : 0,
+                'gaa'     : 0,
+                'save_p'  : 0
+              }
 
             player = self.add_player(name, goalie)
-            self.add_player_stats(player, team, blob)
-
-
-  def get_headers(self, headers):
-    blob = {}
-    # First column header is "Name", which we don't want
-    for header in headers[1:]:
-      headerName = header.text_content().strip()
-      blob[headerName] = ''
-
-    return blob
+            self.add_player_stats(player, team, stats)
 
 
   def add_team(self, team, division_id):
@@ -137,12 +165,33 @@ class Command(BaseCommand):
 
     if not returnVal:
       self.stdout.write('New player stat, adding')
-      ps = PlayerStat(player_id=player, team_id=team, stats=stats)
+      # we'll update the stats below
+      ps = PlayerStat(player_id=player, team_id=team)
       ps.save()
-      returnVal = PlayerStat.objects.latest('id').id
+      returnVal = PlayerStat.objects.latest('id')
       self.stdout.write(' ... saved to db, id=%s' % returnVal)
-    else:
-      self.stdout.write('Existing player stat, updating')
+
+    self.stdout.write('Updating stats for player %s' % returnVal)
+    returnVal.number  = stats['number']
+    returnVal.gp      = stats['gp']
+    returnVal.goals   = stats['goals']
+    returnVal.assists = stats['assists']
+    returnVal.ppg     = stats['ppg']
+    returnVal.ppa     = stats['ppa']
+    returnVal.shg     = stats['shg']
+    returnVal.sha     = stats['sha']
+    returnVal.gwg     = stats['gwg']
+    returnVal.gwa     = stats['gwa']
+    returnVal.psg     = stats['psg']
+    returnVal.eng     = stats['eng']
+    returnVal.sog     = stats['sog']
+    returnVal.pts     = stats['pts']
+    returnVal.ga      = stats['ga']
+    returnVal.gaa     = stats['gaa']
+    returnVal.save_p  = stats['save_p']
+    returnVal.save()
+
+    return returnVal.id
 
 
   def add_player(self, player, goalie):
