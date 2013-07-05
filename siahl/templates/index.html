@@ -4,32 +4,55 @@
   <title>SIAHL Stats</title>
 </head>
 <body>
-<h1>Current league leaders (goals-per-game)</h1>
+<section>
+  <h1>Current league leaders (goals-per-game)</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Player Name</th>
+        <th>Team</th>
+        <th>Division</th>
+        <th>Games Played</th>
+        <th>Goals</th>
+        <th>Goals-per-game</th>
+      </tr>
+    </thead>
+    <tbody>
+  {% for player in players %}
+      <tr>
+        <td>{{ player.player.player_name }}</td>
+        <td>{{ player.team.team_name }}</td>
+        <td>{{ player.team.division.division_name }}</td>
+        <td>{{ player.gp }}</td>
+        <td>{{ player.goals }}</td>
+        <td>{{ player.ratio }}</td>
+      </tr>
+  {% endfor %}
+    </tbody>
+  </table>
+</section>
 
-<table>
-  <thead>
-    <tr>
-      <th>Player Name</th>
-      <th>Team</th>
-      <th>Division</th>
-      <th>Games Played</th>
-      <th>Goals</th>
-      <th>Goals-per-game</th>
-    </tr>
-  </thead>
-  <tbody>
-{% for player in players %}
-    <tr>
-      <td>{{ player.player_id }}</td>
-      <td>{{ player.team_id }}</td>
-      <td> </td>
-      <td>{{ player.gp }}</td>
-      <td>{{ player.goals }}</td>
-      <td>{{ player.ratio }}</td>
-    </tr>
-{% endfor %}
-  </tbody>
-</table>
+<section>
+  <h1>Rink rats (1 or more games on more than 4 teams)</h1>
+  <p>These are skaters only, not goalies</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Player Name</th>
+        <th>Number of teams</th>
+      </tr>
+    </thead>
+    <tbody>
+  {% for rat in rats %}
+      <tr>
+        <td>{{ rat.player_name }}</td>
+        <td>{{ rat.num_teams }}</td>
+      </tr>
+  {% endfor %}
+    </tbody>
+  </table>
+</section>
+
 
 </body>
 </html>
